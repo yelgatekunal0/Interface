@@ -407,6 +407,28 @@ function setupNavigation() {
     const sections = document.querySelectorAll('.view-section');
     const pageTitle = document.getElementById('page-title');
     const sidebar = document.querySelector('.sidebar');
+    const mainApp = document.getElementById('main-app');
+
+    // --- CRITICAL: SIDEBAR REPARENTING TO FIX STACKING CONTEXT ---
+    const syncSidebarParent = () => {
+        if (!sidebar || !mainApp) return;
+
+        const isMobile = window.innerWidth <= 1024;
+        const parent = sidebar.parentElement;
+
+        if (isMobile && parent !== document.body) {
+            // Move to body so it sits above all other stacking contexts
+            document.body.appendChild(sidebar);
+            console.log('Sidebar moved to BODY for mobile layering');
+        } else if (!isMobile && parent !== mainApp) {
+            // Move back to main-app for desktop layout
+            mainApp.insertBefore(sidebar, mainApp.firstChild);
+            console.log('Sidebar moved back to MAIN-APP for desktop layout');
+        }
+    };
+
+    // Initial sync
+    syncSidebarParent();
 
     // Mobile Menu
     const menuToggle = document.getElementById('menu-toggle');
@@ -440,6 +462,17 @@ function setupNavigation() {
         document.body.classList.remove('sidebar-open');
     });
 
+    // Forced sync for mobile menu - ensures it's never stuck
+    const syncMobileState = () => {
+        if (sidebar.classList.contains('open')) {
+            overlay.classList.add('show');
+            document.body.classList.add('sidebar-open');
+        } else {
+            overlay.classList.remove('show');
+            document.body.classList.remove('sidebar-open');
+        }
+    };
+
 
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -471,7 +504,7 @@ function setupNavigation() {
             }
 
             // Close mobile menu
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= 1024) {
                 sidebar.classList.remove('open');
                 const overlay = document.querySelector('.sidebar-overlay');
                 if (overlay) {
@@ -480,6 +513,19 @@ function setupNavigation() {
                 document.body.classList.remove('sidebar-open');
             }
         });
+    });
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+        syncSidebarParent();
+        if (window.innerWidth > 1024) {
+            sidebar.classList.remove('open');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
+            document.body.classList.remove('sidebar-open');
+        }
     });
 
     // Theme Toggle
